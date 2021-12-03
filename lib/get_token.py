@@ -22,6 +22,6 @@ def get_token():
     data = 'grant_type=password&username='+quote(env_vars['userapi'])+'&password='+quote(env_vars['passapi]'))
     if gettok.status_code == 200:
         tok=gettok.json()['access_token']
-        return(tok)
+        return(True,tok)
     else:
         return(False,gettok.text)
