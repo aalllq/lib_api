@@ -13,6 +13,8 @@ from lib.get_token import get_token
 
 
 #mode=(int(input('Выберите режим работы \n 1=Работа с файлом \n 2=Работа с БД \n')))
-
-print(get_token())
+tok=get_token()
+if tok[0]== False:
+    input("authFalse, press ant key to exit \n" +str(tok))
+    exit()
 #print(env_vars)
