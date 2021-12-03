@@ -20,8 +20,8 @@ def get_token():
     headers = {'Authorization' : 'Basic Og==', 'Content-type':'application/x-www-form-urlencoded',
     'Accept': 'application/json, text/plain, */*'}, verify=False,
     data = 'grant_type=password&username='+quote(env_vars['userapi'])+'&password='+quote(env_vars['passapi]'))
-    tok=gettok.json()['access_token']
     if gettok.status_code == 200:
+        tok=gettok.json()['access_token']
         return(tok)
     else:
-        return(False)
+        return(False,gettok.text)
