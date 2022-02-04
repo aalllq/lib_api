@@ -4,9 +4,8 @@ import curses
 from pick import pick,Picker
 from modules import *
 
-global  env_vars,env_url
-env_vars,env_url =get_token()
-
+global  tok,env_vars,env_url
+tok,env_vars,env_url =get_token()     
 ##mk dirs##
 
 def go_back(picker):
@@ -36,6 +35,5 @@ try:
             
 except KeyboardInterrupt:
     print ('Interrupted')       
-
 
 

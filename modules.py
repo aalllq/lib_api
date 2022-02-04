@@ -44,7 +44,9 @@ logging.basicConfig(filename=(f'log/{start_time}.log'),
                     format='[%(asctime)s] [%(levelname)s] => %(message)s', 
                     level=logging.DEBUG)
 logging.info('programm_started')  
-                
+
+### получение токена пароль  из  .env в корневой директории, retunr global env_url, global env_vars_dicts #####################################################        
+               
 def get_token():
     try:
         f =open(glob.glob('.env')[0],'r')
@@ -57,8 +59,11 @@ def get_token():
         key, value = line.strip().split('=', 1)
         env_vars[key]=value
     if not "apiuser" in env_vars or not "apipass" in env_vars:
+        logging.error("not apipass or apiuser in .env")
         return(False,"not apipass or apiuser in .env")
+         
     else:
+        
         env_url=env_vars["url"]
        # try:
         urls=[env_url +'/api/v1/token']
@@ -66,78 +71,18 @@ def get_token():
         data = 'grant_type=password&username=' + quote(env_vars['apiuser']) + '&password=' + quote(env_vars['apipass'])
         sender_action="get_token"
         method="POST"
-        
-       # print(sender_action,urls,headers,data,method)
-        async_send(urls,method,sender_action,data=data,header=header) 
-        print(tok)
-       # tok= gettok.json()["access_token"]
-        #logging.info(f"get token={tok}")  
-        return env_vars,env_url    
-                     
-   #     except:
-        #return "NOT get auth  token:"
-#try:
-#global  tok,env_vars,env_url
-#tok,env_vars,env_url =get_token()
-#print("globals",tok,env_vars,env_url)
-#except:
-#logging.error("not get globals check env")
-#print("not get globals")
-#exit()
-### получение токена пароль  из  .env в корневой директории, retunr global env_url, global env_vars_dicts #####################################################        
-"""
-def get_token():
-    try:
-        f =open(glob.glob('.env')[0],'r')
-        env_vars = {} 
-    except:
-        print("Нет Файла .env")
-        logging.error("Нет Файла .env")
-    for line in f:
-        if line.startswith('#') or not line.strip():continue
-        key, value = line.strip().split('=', 1)
-        env_vars[key]=value
-    if not "apiuser" in env_vars or not "apipass" in env_vars:
-        return(False,"not apipass or apiuser in .env")
-    else:
-        env_url=env_vars["url"]
         try:
-            get_tok_url=env_url+'/api/v1/token'
-            gettok = requests.post(get_tok_url,
-            headers = {'Authorization' : 'Basic Og==', 'Content-type':'application/x-www-form-urlencoded',
-            'Accept': 'application/json, text/plain, */*'}, verify=False,
-            data = 'grant_type=password&username=' + quote(env_vars['apiuser']) + '&password=' + quote(env_vars['apipass']))
-            if gettok.status_code == 200:
-                tok= gettok.json()["access_token"]
-                logging.info(f"get token={tok}")  
-                return tok,env_vars,env_url
-                     
+            vars=async_send(urls,method,sender_action,data=data,header=header)
+            if vars[0][0] == 200:
+                tok=(vars[2]['token']['access_token'])    
+                logging.info(f'get token ok={tok}')
+                return tok,env_vars,env_url       
             else:
-                error = "not 200 status get token check url in env, current url=" + get_tok_url
-                logging.info(error)  
-                return   error
-        except requests.exceptions.RequestException as err:
-            return "NOT get auth  token:",err
-try:
-    global  tok,env_vars,env_url
-    tok,env_vars,env_url =get_token()
-    print("globals",tok,env_vars,env_url)
-except:
-    logging.error("not get globals check env")
-    print("not get globals")
-    exit()
-"""
-    
-################################################################################################################################################################
-
-
-
-
-
-
-
-    
-    
+                logging.error(f"not get token ok_code:data:err_code={vars}")
+        except Exception as e:
+            print(f"NOT get auth  token: {e}")
+            logging.error(f"NOT get auth  token: {e}") 
+ 
 
 #Задаем вопрос если N выходим
 def yes_no():
@@ -173,7 +118,7 @@ def get_device(action):
     except requests.exceptions.RequestException as err:
         logging.error(err,'error get devices in get_devices',url) 
  
- 
+
   
 #### get format return obj  format = "exel","sn_list",
 def file_parser(format,file):
@@ -223,23 +168,21 @@ def fiscalizer(action):
 ###### sender#### 
 err_arr=[]
 ok_arr=[]
-
+data_async={}
 async def fetch(url, session,method,sender_action,**kwargs):
     
     async with session.request(method,url,data=kwargs["data"],headers=kwargs["header"]) as response:
-        print(response.status)
+        
         if response.status == 200:
             ok_arr.append(response.status)
-            #time.sleep(5)
-        if sender_action== "get_token":
-            global tok
-            tok = await response.json()
-            
-            
-              
+            if sender_action== "get_token":
+                data_async['token'] = await response.json()
+                #print(data_async)
+                return ok_arr,err_arr,data_async
         else:
             err_arr.append(reponse.status)
-             
+
+    
 #        print(f"ok={ok} err={err}")
             
           # print(response.text)
@@ -249,8 +192,8 @@ async def bound_fetch(sem, url, session,method,sender_action,**kwargs):
     # Getter function with semaphore.
     async with sem:
         await fetch(url, session,method,sender_action,**kwargs)
- #   return ok_arr,err_arr
-        
+        return ok_arr,err_arr,data_async
+   
 async def run(urls,method,sender_action,**kwargs):
     tasks = []    
     sem = asyncio.Semaphore(160)
@@ -265,7 +208,7 @@ async def run(urls,method,sender_action,**kwargs):
             
         responses = asyncio.gather(*tasks)
         await responses
-     #   return ok_arr,err_arr
+        return ok_arr,err_arr,data_async
 
 def async_send(urls,method,sender_action,**kwargs):
     loop = asyncio.get_event_loop()
@@ -273,9 +216,11 @@ def async_send(urls,method,sender_action,**kwargs):
     loop.run_until_complete(future)
     #print(urls,method,sender_action)
     print("error=",len(err_arr),"OK=",len(ok_arr))
+    return ok_arr,err_arr,data_async
     ok_arr.clear()
     err_arr.clear()
-    return ok_arr,err_arr
+    data_async.clear()
+    
 
 
 
