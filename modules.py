@@ -111,11 +111,11 @@ def get_data(action):
         response = async_send(url,method,action, header= {'Authorization':'Bearer ' + tok, 'Content-type':'application/json', 'Accept': 'application/json'},data=data)
         if response[0][0][0] == 200:
             data=response[0][2]["data"]
-            logging.info(f"get  device  in get_data, status:{response}")
+            logging.info(f"get  device  in get_data, count ok status:{len(response[0][0])}")
             return data
             
         elif response.status_code != 200:
-            logging.error(f"get  device  in get_data,{response}")
+            logging.error(f"get  device  in get_data error status {response.status_code}")
 
     except requests.exceptions.RequestException as err:
         logging.error(err,'error get data in get_datas',url)
