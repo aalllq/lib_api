@@ -4,10 +4,9 @@ import curses
 from pick import pick,Picker
 from modules import *
 
-global  tok,env_vars,env_url
-tok,env_vars,env_url =get_token()     
-##mk dirs##
 
+##mk dirs##
+#get_data("all_device")
 def go_back(picker):
     return None, -1
 
@@ -21,15 +20,17 @@ def menu(title,options):
 try:
     def_options=['Exit']
     title =f"Выберите дейтсвие"
-    options = ['Fiscalize/Refiscalize'] + def_options
+    options = ['Fiscalize/Refiscalize','Get_device'] + def_options
     menu(title,options)
     if options[index] == 'Fiscalize/Refiscalize' :
-        title = "\n\nвыберите режим перефискализации"
+        title = "\nвыберите режим перефискализации"
         options = ['async_from file'] + def_options
         menu(title,options)
         if options[index] == 'async_from file' :
             print(fiscalizer("from_excel"))
-         
+    if options[index] == 'Get_device' :
+        print(beeper("a","a"))
+        
     
                 
             
