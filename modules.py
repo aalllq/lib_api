@@ -72,10 +72,9 @@ def get_token():
             data = 'grant_type=password&username=' + quote(env_vars['apiuser']) + '&password=' + quote(env_vars['apipass'])
             sender_action="get_token"
             method="POST"
-            vars=async_send(urls,method,sender_action,data=data,header=header)
-
-            if vars[0][0][0] == 200:
-                tok=vars[0][2]['data']['access_token']
+            async_send(urls,method,sender_action,data=data,header=header)
+            if ok_arr[0] == 200:
+                tok=data_async['data']['access_token']
                 logging.info(f'get token ok={tok}')
                 return tok,env_vars,env_url
             else:
@@ -109,6 +108,7 @@ def get_data(action):
         print("not valid action in get_data")
     try:
         response = async_send(url,method,action, header= {'Authorization':'Bearer ' + tok, 'Content-type':'application/json', 'Accept': 'application/json'},data=data)
+        
         if response[0][0][0] == 200:
             data=response[0][2]["data"]
             logging.info(f"get  device  in get_data, count ok status:{len(response[0][0])}")
@@ -171,13 +171,14 @@ async def fetch(url, session,method,sender_action,**kwargs):
 
     async with session.request(method,url,data=kwargs["data"],headers=kwargs["header"]) as response:
         if response.status == 200:
+         #   print(response.status)
             ok_arr.append(response.status)
             if sender_action in ["get_token","all_device"]:
                 data_async['data'] = await response.json()
             #   print(1,data_async)
         else:
-            err_arr.append(reponse.status)
-    return  ok_arr,err_arr,data_async
+            err_arr.append(response.status)
+   # return  ok_arr,err_arr,data_async
 
 
 async def bound_fetch(sem, url, session,method,sender_action,**kwargs):
@@ -185,7 +186,7 @@ async def bound_fetch(sem, url, session,method,sender_action,**kwargs):
     async with sem:
        a= await fetch(url, session,method,sender_action,**kwargs)
       
-       return a
+     #  return a
 
 async def run(urls,method,sender_action,**kwargs):
     tasks = []
@@ -193,13 +194,17 @@ async def run(urls,method,sender_action,**kwargs):
     async with ClientSession() as session:
         if len(urls) == 1:
             url=urls[0]
-        #for url in range(len(urls)):
-         #   print(url,urls)
             task = asyncio.ensure_future(bound_fetch(sem, url.format(url),session,method,sender_action,**kwargs))
             tasks.append(task)
+        elif len(urls) > 1:
+            for url in urls:
+                #print(url)
+                task = asyncio.ensure_future(bound_fetch(sem, url.format(url),session,method,sender_action,**kwargs))
+                tasks.append(task)
+            
 
         responses = asyncio.gather(*tasks)
-        return await responses
+        await responses
 
       # return responses
 
@@ -210,17 +215,15 @@ def async_send(urls,method,sender_action,**kwargs):
     err_arr=[]
     ok_arr=[]
     data_async={}
-    try:
-        loop = asyncio.get_event_loop()
-        future = asyncio.ensure_future(run(urls,method,sender_action,**kwargs))
-        result=loop.run_until_complete(future)
-      #  print(a)
-        #print(urls,method,sender_action)
-       # print(2,data_async)
-       # print("error=",len(err_arr),"OK=",len(ok_arr))
-        return result
-    except:
-        print(1)
+    #try:
+    loop = asyncio.get_event_loop()
+    future = asyncio.ensure_future(run(urls,method,sender_action,**kwargs))
+    result=loop.run_until_complete(future)
+    #return result
+  #  except Exception as e:
+#        print(f' async_send error={e}')
+       # logging.error(f' async_send error={e}')
+        
 
     ########################################################################
 #    while True:
@@ -228,19 +231,33 @@ def async_send(urls,method,sender_action,**kwargs):
       #          print(f"{i}", end="\r", flush=True)
      #           time.sleep(1)
      
-def beeper(action,id_array):
-    data=get_data("all_device")
-    for kkt in data:
-        print(kkt)
-
+def beeper(action):
+    urls=[]
+    if action not in ["excel","all_device","list"]:
+        logging.error(f'not valid action{action} in beeper')
+    else:
+        try:
+            all_data=get_data(action)
+            if action == "all_device":
+                for kkt in all_data:
+                    url = env_url +'/api/v1/devices/' + kkt['id']+'/beep'
+                    
+                    urls.append(url)
+                    #print(kkt['id'])
+                response = async_send(urls,"POST","beep", header= {'Authorization':'Bearer ' + tok, 'Content-type':'application/json', 'Accept': 'application/json'},data={})
+                print(len(ok_arr))
+        except Exception as e:
+            print(f'error in beeper {e}')
+     
+            
 
 ### write data to_excel,to_list
-def data_writter(action):
+def data_writter(data_type,action):
     if action not in ["to_excel","to_list"]:
         print(f"{action} not action in data_writter")
         logging.error(f"{action} not action in data_writter")
         time.sleep(10)
-    elif action == "to_excel": 
+    elif action == "to_excel" and data_type == "all_device": 
         rj=get_data("all_device")
         aa=pd.json_normalize(rj)
         df=pd.DataFrame(aa)

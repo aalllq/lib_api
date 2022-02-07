@@ -1,3 +1,4 @@
+
 import time
 import arrow
 import curses
@@ -20,7 +21,7 @@ def menu(title,options):
 try:
     def_options=['Exit']
     title =f"Выберите дейтсвие"
-    options = ['Fiscalize/Refiscalize','Get_device'] + def_options
+    options = ['Fiscalize/Refiscalize','Get_device','beep'] + def_options
     menu(title,options)
     if options[index] == 'Fiscalize/Refiscalize' :
         title = "\nвыберите режим перефискализации"
@@ -29,12 +30,17 @@ try:
         if options[index] == 'async_from file' :
             print(fiscalizer("from_excel"))
     if options[index] == 'Get_device' :
-            title =f"Выберите тип полученяи устройств"
+            title =f"Выберите тип получения устройств"
             options = ['all_to_excel'] + def_options
             menu(title,options)
             if options[index] == 'all_to_excel' :
-                print(data_writter("to_excel"))
-        
+                data_writter("all_device","to_excel")
+    
+    if options[index] == 'beep' :
+            title =f"Выберите источник данных"
+            options = ['all_device','excel',"list"] + def_options
+            menu(title,options)
+            beeper(options[index])
     
                 
             
