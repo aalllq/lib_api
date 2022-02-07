@@ -103,7 +103,7 @@ def get_data(action):
     method='GET'
     data=''
     if action == "all_device":
-        url = [env_url + '/api/v1/devices?count=10']
+        url = [env_url + '/api/v1/devices?count=100000']
     else:
         logging.error("not valid action in get_data")
         print("not valid action in get_data")
@@ -112,13 +112,13 @@ def get_data(action):
         if response[0][0][0] == 200:
             data=response[0][2]["data"]
             logging.info(f"get  device  in get_data, status:{response}")
-        return data
-        
-        #elif response.status_code != 200:
-            #logging.error(f"get  device  in get_data,{response})
+            return data
+            
+        elif response.status_code != 200:
+            logging.error(f"get  device  in get_data,{response}")
 
     except requests.exceptions.RequestException as err:
-        logging.error(err,'error get devices in get_datas',url)
+        logging.error(err,'error get data in get_datas',url)
 
 
 
@@ -184,7 +184,7 @@ async def bound_fetch(sem, url, session,method,sender_action,**kwargs):
     # Getter function with semaphore.
     async with sem:
        a= await fetch(url, session,method,sender_action,**kwargs)
-      # print(a)
+      
        return a
 
 async def run(urls,method,sender_action,**kwargs):
@@ -222,14 +222,6 @@ def async_send(urls,method,sender_action,**kwargs):
     except:
         print(1)
 
-   # finally:
-   #     ok_arr.clear()
-   #     err_arr.clear()
-    #    data_async.clear()
-
-
-
-
     ########################################################################
 #    while True:
        #     for i in range(20,0,-1):
@@ -242,7 +234,31 @@ def beeper(action,id_array):
         print(kkt)
 
 
+### write data to_excel,to_list
+def data_writter(action):
+    if action not in ["to_excel","to_list"]:
+        print(f"{action} not action in data_writter")
+        logging.error(f"{action} not action in data_writter")
+        time.sleep(10)
+    elif action == "to_excel": 
+        rj=get_data("all_device")
+        aa=pd.json_normalize(rj)
+        df=pd.DataFrame(aa)
+        filename='output/output_'+arrow.now().format('YYYY-MM-DD__HH_mm_ss')+'.xlsx'
+#print(df['isContractTerminated'])
+        try:
+            df.to_excel(filename, sheet_name='Sheet_name_1',index=False,encoding='utf-8')
+            print(f"{filename} written")
+            logging.info(f"{filename} written")
+        except:
+            print(f"{filename} written")
+            logging.info(f"{filename} not  written")
+
+
+    
+
+
 # this always last     
 global  tok,env_vars,env_url
 tok,env_vars,env_url =get_token()  
-print(f"полученные данные {tok,env_vars,env_url}")
+print(f"get login data {tok,env_vars,env_url}")
