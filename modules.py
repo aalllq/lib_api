@@ -31,7 +31,7 @@ def make_dir(paths):
         if not isExist:
             try:
                 os.makedirs(path)
-                print(f"{glob.glob(path)} папка создана в директории запуска программы ")
+                print(f"{glob.glob(path)} папка создана в директории запуска программы  ПЕРЕЗАПУСТИТЕ ПРИЛОЖЕНИЕ")
                 time.sleep(2)
             except:
                 print(f" не удалось создать папки{paths}")
@@ -107,15 +107,15 @@ def get_data(action):
         logging.error("not valid action in get_data")
         print("not valid action in get_data")
     try:
-        response = async_send(url,method,action, header= {'Authorization':'Bearer ' + tok, 'Content-type':'application/json', 'Accept': 'application/json'},data=data)
-        
-        if response[0][0][0] == 200:
-            data=response[0][2]["data"]
-            logging.info(f"get  device  in get_data, count ok status:{len(response[0][0])}")
+        async_send(url,method,action, header= {'Authorization':'Bearer ' + tok, 'Content-type':'application/json', 'Accept': 'application/json'},data=data)
+        if ok_arr[0] == 200:
+            data=data_async['data']
+            logging.info(f"get  device  in get_data,ok status:{len(ok_arr)} all_devices:{len(data_async['data'])}")
+            print(f"get  device  in get_data,ok status:{len(ok_arr)} all_devices:{len(data_async['data'])}")
             return data
             
-        elif response.status_code != 200:
-            logging.error(f"get  device  in get_data error status {response.status_code}")
+        else:
+            logging.error(f"get  device  in get_data error status {err_arr}")
 
     except requests.exceptions.RequestException as err:
         logging.error(err,'error get data in get_datas',url)
