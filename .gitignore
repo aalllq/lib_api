@@ -3,4 +3,5 @@
 data
 log
 output
+output/*
 __pycache__
