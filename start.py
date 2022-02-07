@@ -29,7 +29,11 @@ try:
         if options[index] == 'async_from file' :
             print(fiscalizer("from_excel"))
     if options[index] == 'Get_device' :
-        print(beeper("a","a"))
+            title =f"Выберите тип полученяи устройств"
+            options = ['all_to_excel'] + def_options
+            menu(title,options)
+            if options[index] == 'all_to_excel' :
+                print(data_writter("to_excel"))
         
     
                 
