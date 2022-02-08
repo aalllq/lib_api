@@ -74,11 +74,11 @@ def get_token():
             method="POST"
             async_send(urls,method,sender_action,data=data,header=header)
             if ok_arr[0] == 200:
-                tok=data_async['data']['access_token']
+                tok=data_async[0]['access_token']
                 logging.info(f'get token ok={tok}')
                 return tok,env_vars,env_url
             else:
-                logging.error(f"not get token ok_code:data:err_code={vars}")
+                logging.error(f"not get token ok_code:data:err_code={ok_arr[0]}")
         except Exception as e:
             print(f"NOT get auth  token: {e}")
             logging.error(f"NOT get auth  token: {e}")
@@ -109,9 +109,9 @@ def get_data(action):
     try:
         async_send(url,method,action, header= {'Authorization':'Bearer ' + tok, 'Content-type':'application/json', 'Accept': 'application/json'},data=data)
         if ok_arr[0] == 200:
-            data=data_async['data']
-            logging.info(f"get  device  in get_data,ok status:{len(ok_arr)} all_devices:{len(data_async['data'])}")
-            print(f"get  device  in get_data,ok status:{len(ok_arr)} all_devices:{len(data_async['data'])}")
+            data=data_async
+            logging.info(f"get  device  in get_data,ok status:{len(ok_arr)}")
+            print(f"get  device  in get_data,ok status:{len(ok_arr)}")
             return data
             
         else:
@@ -167,30 +167,28 @@ def fiscalizer(action):
 ###### sender####
 
 async def fetch(url, session,method,sender_action,**kwargs):
-
-
+    start_time = time.time()
     async with session.request(method,url,data=kwargs["data"],headers=kwargs["header"]) as response:
         if response.status == 200:
          #   print(response.status)
             ok_arr.append(response.status)
             if sender_action in ["get_token","all_device"]:
-                data_async['data'] = await response.json()
+                data_async.append(await response.json())
+                print(response.status)
             #   print(1,data_async)
         else:
             err_arr.append(response.status)
-   # return  ok_arr,err_arr,data_async
+        print("--- %s seconds ---" % (time.time() - start_time))
 
 
 async def bound_fetch(sem, url, session,method,sender_action,**kwargs):
-    # Getter function with semaphore.
     async with sem:
-       a= await fetch(url, session,method,sender_action,**kwargs)
-      
-     #  return a
+       await fetch(url, session,method,sender_action,**kwargs)
+
 
 async def run(urls,method,sender_action,**kwargs):
     tasks = []
-    sem = asyncio.Semaphore(160)
+    sem = asyncio.Semaphore(100)
     async with ClientSession() as session:
         if len(urls) == 1:
             url=urls[0]
@@ -198,7 +196,7 @@ async def run(urls,method,sender_action,**kwargs):
             tasks.append(task)
         elif len(urls) > 1:
             for url in urls:
-                #print(url)
+
                 task = asyncio.ensure_future(bound_fetch(sem, url.format(url),session,method,sender_action,**kwargs))
                 tasks.append(task)
             
@@ -214,18 +212,17 @@ def async_send(urls,method,sender_action,**kwargs):
     global data_async
     err_arr=[]
     ok_arr=[]
-    data_async={}
+    data_async=[]
     #try:
     loop = asyncio.get_event_loop()
     future = asyncio.ensure_future(run(urls,method,sender_action,**kwargs))
-    result=loop.run_until_complete(future)
-    #return result
-  #  except Exception as e:
-#        print(f' async_send error={e}')
-       # logging.error(f' async_send error={e}')
+    loop.run_until_complete(future)
         
 
     ########################################################################
+
+
+###timer
 #    while True:
        #     for i in range(20,0,-1):
       #          print(f"{i}", end="\r", flush=True)
@@ -239,13 +236,13 @@ def beeper(action):
         try:
             all_data=get_data(action)
             if action == "all_device":
-                for kkt in all_data:
+                for kkt in all_data[0]:
                     url = env_url +'/api/v1/devices/' + kkt['id']+'/beep'
-                    
+                   # sn_list=
                     urls.append(url)
                     #print(kkt['id'])
                 response = async_send(urls,"POST","beep", header= {'Authorization':'Bearer ' + tok, 'Content-type':'application/json', 'Accept': 'application/json'},data={})
-                print(len(ok_arr))
+                print(f"ok={len(ok_arr)},err={len(err_arr)}")
         except Exception as e:
             print(f'error in beeper {e}')
      

@@ -4,7 +4,10 @@ import arrow
 import curses
 from pick import pick,Picker
 from modules import *
-
+global err_arr
+global ok_arr
+global data_async
+print(sys.platform)
 
 ##mk dirs##
 #get_data("all_device")
@@ -40,7 +43,10 @@ try:
             title =f"Выберите источник данных"
             options = ['all_device','excel',"list"] + def_options
             menu(title,options)
-            beeper(options[index])
+            while True:
+                start_time = time.time()
+                beeper(options[index])
+                print("--- %s seconds ---" % (time.time() - start_time))
     
                 
             
