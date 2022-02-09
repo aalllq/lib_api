@@ -256,7 +256,7 @@ def data_writter(data_type,action):
         time.sleep(10)
     elif action == "to_excel" and data_type == "all_device": 
         rj=get_data("all_device")
-        aa=pd.json_normalize(rj)
+        aa=pd.json_normalize(rj[0])
         df=pd.DataFrame(aa)
         filename='output/output_'+arrow.now().format('YYYY-MM-DD__HH_mm_ss')+'.xlsx'
 #print(df['isContractTerminated'])
