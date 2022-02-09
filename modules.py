@@ -4,7 +4,8 @@ import os.path
 import glob
 import random
 import asyncio
-from aiohttp import ClientSession
+import aiohttp
+from aiohttp import ClientSession,ClientTimeout,TCPConnector
 import sys
 from  requests.utils import quote
 #import xlrd
@@ -111,7 +112,6 @@ def get_data(action):
         if ok_arr[0] == 200:
             data=data_async
             logging.info(f"get  device  in get_data,ok status:{len(ok_arr)}")
-            print(f"get  device  in get_data,ok status:{len(ok_arr)}")
             return data
             
         else:
@@ -167,18 +167,20 @@ def fiscalizer(action):
 ###### sender####
 
 async def fetch(url, session,method,sender_action,**kwargs):
-    start_time = time.time()
     async with session.request(method,url,data=kwargs["data"],headers=kwargs["header"]) as response:
-        if response.status == 200:
-         #   print(response.status)
-            ok_arr.append(response.status)
-            if sender_action in ["get_token","all_device"]:
+        #print(response.status,arrow.now())
+        if  sender_action in ["get_token","all_device"] :
+            if response.status == 200:
+                ok_arr.append(response.status)
                 data_async.append(await response.json())
-                print(response.status)
-            #   print(1,data_async)
-        else:
-            err_arr.append(response.status)
-
+            else:
+                err_arr.append(response.status)
+        if sender_action in ["beep"]:
+            if response.status !=200:
+                err_arr.append(url)
+            elif response.status == 200:
+                ok_arr.append(url)
+            
 
 async def bound_fetch(sem, url, session,method,sender_action,**kwargs):
     async with sem:
@@ -187,8 +189,10 @@ async def bound_fetch(sem, url, session,method,sender_action,**kwargs):
 
 async def run(urls,method,sender_action,**kwargs):
     tasks = []
-    sem = asyncio.Semaphore(160)
-    async with ClientSession() as session:
+    sem = asyncio.Semaphore(165)
+    conn = TCPConnector(limit=50)
+    #timeout = ClientTimeout(total=15)
+    async with ClientSession(connector=conn) as session:
         if len(urls) == 1:
             url=urls[0]
             task = asyncio.ensure_future(bound_fetch(sem, url.format(url),session,method,sender_action,**kwargs))
@@ -198,12 +202,8 @@ async def run(urls,method,sender_action,**kwargs):
 
                 task = asyncio.ensure_future(bound_fetch(sem, url.format(url),session,method,sender_action,**kwargs))
                 tasks.append(task)
-            
+        await asyncio.gather(*tasks)
 
-        responses = asyncio.gather(*tasks)
-        await responses
-
-      # return responses
 
 def async_send(urls,method,sender_action,**kwargs):
     global err_arr
@@ -234,6 +234,8 @@ def timer(times):
      
 def beeper(action):
     urls=[]
+    sn_list=[]
+    comment_list=[]
     if action not in ["excel","all_device","list"]:
         logging.error(f'not valid action{action} in beeper')
     else:
@@ -242,11 +244,18 @@ def beeper(action):
             if action == "all_device":
                 for kkt in all_data[0]:
                     url = env_url +'/api/v1/devices/' + kkt['id']+'/beep'
-                   # sn_list=
+                    sn_list.append(kkt["serialNumber"])
+                    comment_list.append(kkt["comment"])
                     urls.append(url)
-                    #print(kkt['id'])
-                response = async_send(urls,"POST","beep", header= {'Authorization':'Bearer ' + tok, 'Content-type':'application/json', 'Accept': 'application/json'},data={})
-                print(f"ok={len(ok_arr)},err={len(err_arr)}")
+                print(f"wait send beep {len(urls)} device beep")
+                async_send(urls,"POST","beep", header= {'Authorization':'Bearer ' + tok, 'Content-type':'application/json', 'Accept': 'application/json'},data={})
+            for i in urls:
+                if i in ok_arr:
+                    print(f"ok_beep {sn_list[urls.index(i)]} {comment_list[urls.index(i)]}")
+            for i in urls:
+                if i in err_arr:
+                    print(f"err_beep {sn_list[urls.index(i)]} {comment_list[urls.index(i)]}")
+            print(f"ok={len(ok_arr)},err={len(err_arr)}")
         except Exception as e:
             print(f'error in beeper {e}')
      
@@ -257,7 +266,7 @@ def data_writter(data_type,action):
     if action not in ["to_excel","to_list"]:
         print(f"{action} not action in data_writter")
         logging.error(f"{action} not action in data_writter")
-        time.sleep(10)
+        time.sleep(5)
     elif action == "to_excel" and data_type == "all_device": 
         rj=get_data("all_device")
         aa=pd.json_normalize(rj[0])

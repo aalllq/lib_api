@@ -46,6 +46,7 @@ try:
                 start_time = time.time()
                 beeper(options[index])
                 print("--- %s seconds ---" % (time.time() - start_time))
+                timer(10)
     
                 
             
