@@ -8,7 +8,6 @@ global err_arr
 global ok_arr
 global data_async
 print(sys.platform)
-
 ##mk dirs##
 #get_data("all_device")
 def go_back(picker):

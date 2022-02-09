@@ -178,7 +178,6 @@ async def fetch(url, session,method,sender_action,**kwargs):
             #   print(1,data_async)
         else:
             err_arr.append(response.status)
-        print("--- %s seconds ---" % (time.time() - start_time))
 
 
 async def bound_fetch(sem, url, session,method,sender_action,**kwargs):
@@ -188,7 +187,7 @@ async def bound_fetch(sem, url, session,method,sender_action,**kwargs):
 
 async def run(urls,method,sender_action,**kwargs):
     tasks = []
-    sem = asyncio.Semaphore(100)
+    sem = asyncio.Semaphore(160)
     async with ClientSession() as session:
         if len(urls) == 1:
             url=urls[0]
@@ -223,10 +222,15 @@ def async_send(urls,method,sender_action,**kwargs):
 
 
 ###timer
-#    while True:
-       #     for i in range(20,0,-1):
-      #          print(f"{i}", end="\r", flush=True)
-     #           time.sleep(1)
+def timer(times):
+    for i in range(int(times),0,-1):
+        sys.stdout.write("\r")
+        sys.stdout.write("{:2d} seconds remaining.".format(i)) 
+        sys.stdout.flush()
+        time.sleep(1)
+    sys.stdout.write("\r")
+        #print(f"{int(i)}",  end="\r", flush=True)
+        
      
 def beeper(action):
     urls=[]
