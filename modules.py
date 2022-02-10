@@ -254,7 +254,8 @@ def beeper(action):
             for kkt in all_data[0]:
                 url = env_url +'/api/v1/devices/' + kkt['id']+'/beep'
                 all_sn_list.append(kkt["serialNumber"])
-                comment_list.append(kkt["comment"])
+                if not kkt["comment"]:comment_list.append(None)
+                else:comment_list.append(kkt["comment"].strip())
                 all_urls.append(url)
             if action == "all_device":
                     urls=all_urls 
@@ -266,12 +267,17 @@ def beeper(action):
                         urls.append(all_urls[all_sn_list.index(sn[0])])
                     else: 
                         print(f"{sn[0]} kkt not find check sn\n")
-                        
-                   # print(all_urls[all_sn_list.index(sn[0])])
-                   # print(all_sn_list[all_sn_list.index(sn[0])])
+            if action ==  "for_comment":
+                comment_array= []
+                for comment in comment_list:
+                    if comment == None and:
+                    if comment  not in comment_array:
+                        print(comment)
+                        comment_array.append(comment.strip())
+                print(comment_array.sort())
 
             
-            for tic in range(5):
+            while (100,0,-1):
                 print(f"\n\nwait send beep {len(urls)} device beep\n not find sn = {len(not_find_device)}\n\n")
                 async_send(urls,"POST","beep", header= {'Authorization':'Bearer ' + tok, 'Content-type':'application/json', 'Accept': 'application/json'},data={})
                 for i in urls:
