@@ -1,5 +1,6 @@
 import requests,json,urllib3
 import os
+
 import os.path
 import glob
 import random
@@ -86,8 +87,8 @@ def get_token():
 
 
 #Задаем вопрос если N выходим
-def yes_no():
-    quest=input(f"press KEY \n\n Y-OK \n N= exit\n")
+def yes_no(*args):
+    quest=input(f"\n\n\npress KEY \n\n Y-OK \n N= exit\n\n{args} \n\n")
     if quest == "N"  or quest == "n":
         exit("EXIT")
 
@@ -123,17 +124,25 @@ def get_data(action):
 
 
 #### get format,file return obj  format = "exel","sn_list",
-def file_parser(format,file):
+def file_parser(format):
+    file=get_file()
     try:
-        if format == "excel":
+        if format not in ['excel','sn_list']:logging.error(f"error not format {format} in module parser()")
+        elif format == "excel":
             excel = pd.read_excel(file, engine='openpyxl',dtype=str)
             parser_out = excel.to_json()
-            parser_out =json.loads(parser_out)
-            return parser_out
-        else:
-            logging.error(f"error not format {format} in module parser()")
-    except:
-            logging.error(f"error parse {file} in module parser()")
+            parser_out = json.loads(parser_out)
+        elif format == "sn_list":
+            parser_out=[]
+            f =open(file)
+            for line in f:
+                if line.startswith('#'):continue #or not line.strip()
+                parser_out.append(line.strip().split(';'))
+            #print(pd.DataFrame.to_json(pd.DataFrame(parser_out)))
+        return parser_out
+ 
+    except Exception as e:
+            logging.error(f"error parse {file} in module parser()  {e}")
 
 
 
@@ -212,7 +221,6 @@ def async_send(urls,method,sender_action,**kwargs):
     err_arr=[]
     ok_arr=[]
     data_async=[]
-    #try:
     loop = asyncio.get_event_loop()
     future = asyncio.ensure_future(run(urls,method,sender_action,**kwargs))
     loop.run_until_complete(future)
@@ -233,31 +241,50 @@ def timer(times):
         
      
 def beeper(action):
+    all_urls=[]
     urls=[]
-    sn_list=[]
+    all_sn_list=[]
     comment_list=[]
-    if action not in ["excel","all_device","list"]:
-        logging.error(f'not valid action{action} in beeper')
+    not_find_device=[]
+    if action not in ["excel","all_device","sn_list","for_comment"]:
+        logging.error(f'not valid action {action} in beeper')
     else:
         try:
-            all_data=get_data(action)
+            all_data=get_data("all_device")
+            for kkt in all_data[0]:
+                url = env_url +'/api/v1/devices/' + kkt['id']+'/beep'
+                all_sn_list.append(kkt["serialNumber"])
+                comment_list.append(kkt["comment"])
+                all_urls.append(url)
             if action == "all_device":
-                for kkt in all_data[0]:
-                    url = env_url +'/api/v1/devices/' + kkt['id']+'/beep'
-                    sn_list.append(kkt["serialNumber"])
-                    comment_list.append(kkt["comment"])
-                    urls.append(url)
-                print(f"wait send beep {len(urls)} device beep")
+                    urls=all_urls 
+            if action == "sn_list":
+                yes_no("Сейчас выдаст окно с выбора файла txt формат sn;any;any... либо sn  каждый с новой строки")
+                kkt_list=file_parser(action)
+                for sn in kkt_list:
+                    if sn[0] in all_sn_list:
+                        urls.append(all_urls[all_sn_list.index(sn[0])])
+                    else: 
+                        print(f"{sn[0]} kkt not find check sn\n")
+                        
+                   # print(all_urls[all_sn_list.index(sn[0])])
+                   # print(all_sn_list[all_sn_list.index(sn[0])])
+
+            
+            for tic in range(5):
+                print(f"\n\nwait send beep {len(urls)} device beep\n not find sn = {len(not_find_device)}\n\n")
                 async_send(urls,"POST","beep", header= {'Authorization':'Bearer ' + tok, 'Content-type':'application/json', 'Accept': 'application/json'},data={})
-            for i in urls:
-                if i in ok_arr:
-                    print(f"ok_beep {sn_list[urls.index(i)]} {comment_list[urls.index(i)]}")
-            for i in urls:
-                if i in err_arr:
-                    print(f"err_beep {sn_list[urls.index(i)]} {comment_list[urls.index(i)]}")
-            print(f"ok={len(ok_arr)},err={len(err_arr)}")
+                for i in urls:
+                    if i in ok_arr:
+                        print(f"ok_beep {all_sn_list[urls.index(i)]} {comment_list[urls.index(i)]}")
+                for i in urls:
+                    if i in err_arr:
+                        print(f"err_beep {all_sn_list[urls.index(i)]} {comment_list[urls.index(i)]}")
+                print(f"\n ok_beep={len(ok_arr)}\n err_beep={len(err_arr)}\n\n\n wait next beep 20sec")
+                time.sleep(20)
+            
         except Exception as e:
-            print(f'error in beeper {e}')
+            print(f'error in beeper before while {e}')
      
             
 
