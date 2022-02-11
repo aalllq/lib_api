@@ -1,6 +1,6 @@
 import requests,json,urllib3
 import os
-
+from  pprint import pprint
 import os.path
 import glob
 import random
@@ -101,15 +101,13 @@ def get_file():
 
 ####### get action return json
 def get_data(action):
-    method='GET'
-    data=''
     if action == "all_device":
         url = [env_url + '/api/v1/devices?count=100000']
     else:
         logging.error("not valid action in get_data")
         print("not valid action in get_data")
     try:
-        async_send(url,method,action, header= {'Authorization':'Bearer ' + tok, 'Content-type':'application/json', 'Accept': 'application/json'},data=data)
+        async_send(url,"GET",action, header= {'Authorization':'Bearer ' + tok, 'Content-type':'application/json', 'Accept': 'application/json'},data="")
         if ok_arr[0] == 200:
             data=data_async
             logging.info(f"get  device  in get_data,ok status:{len(ok_arr)}")
@@ -254,7 +252,7 @@ def beeper(action):
             for kkt in all_data[0]:
                 url = env_url +'/api/v1/devices/' + kkt['id']+'/beep'
                 all_sn_list.append(kkt["serialNumber"])
-                if not kkt["comment"]:comment_list.append(None)
+                if not kkt["comment"]:comment_list.append("None")
                 else:comment_list.append(kkt["comment"].strip())
                 all_urls.append(url)
             if action == "all_device":
@@ -268,29 +266,32 @@ def beeper(action):
                     else: 
                         print(f"{sn[0]} kkt not find check sn\n")
             if action ==  "for_comment":
-                comment_array= []
-                for comment in comment_list:
-                    if comment == None and:
-                    if comment  not in comment_array:
-                        print(comment)
-                        comment_array.append(comment.strip())
-                print(comment_array.sort())
-
+                #comment_array =  dict(sorted({i:comment_list.count(i) for i in comment_list}.items()))
+                comment_array =  {i:comment_list.count(i) for i in comment_list}
+                print(f"\n Comment   :  Count kkt")
+                pprint(comment_array)
+                select_comment = str(input("\n ENTER NUM GALAXY \n"))
+                #print(select_comment)
+                #print(comment_list)
+                for sn in all_sn_list:
+                    if comment_list[all_sn_list.index(sn)] == select_comment:
+                        urls.append(all_urls[all_sn_list.index(sn)])
+                        print(sn,comment_list[all_sn_list.index(sn)],all_urls[all_sn_list.index(sn)])
             
-            while (100,0,-1):
+            for tic in  range(20):
                 print(f"\n\nwait send beep {len(urls)} device beep\n not find sn = {len(not_find_device)}\n\n")
                 async_send(urls,"POST","beep", header= {'Authorization':'Bearer ' + tok, 'Content-type':'application/json', 'Accept': 'application/json'},data={})
-                for i in urls:
+                for i in all_urls:
                     if i in ok_arr:
-                        print(f"ok_beep {all_sn_list[urls.index(i)]} {comment_list[urls.index(i)]}")
-                for i in urls:
+                        print(f"ok_beep {all_sn_list[all_urls.index(i)]} {comment_list[all_urls.index(i)]}")
+                for i in all_urls:
                     if i in err_arr:
-                        print(f"err_beep {all_sn_list[urls.index(i)]} {comment_list[urls.index(i)]}")
+                        print(f"err_beep {all_sn_list[all_urls.index(i)]} {comment_list[all_urls.index(i)]}")
                 print(f"\n ok_beep={len(ok_arr)}\n err_beep={len(err_arr)}\n\n\n wait next beep 20sec")
                 time.sleep(20)
             
         except Exception as e:
-            print(f'error in beeper before while {e}')
+            print(f'error in beeper  {e}')
      
             
 
