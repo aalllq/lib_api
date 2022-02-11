@@ -351,7 +351,7 @@ def device_action(action,**kwargs):
                 comment_list.append(kkt["comment"].strip())
         
         if action == "reboot_all_devices":
-            urls==all_urls   
+            urls=all_urls   
             
             
 
