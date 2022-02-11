@@ -29,7 +29,7 @@ try:
             print(fiscalizer("from_excel"))
     if options[index] == 'get_info' :
             title = f"Выберите тип получения устройств"
-            options = ['all_device',"all_groups"] + def_options
+            options = ['all_device',"all_groups","all_orgs"] + def_options
             menu(title,options)
            # if options[index] == 'all_to_excel' :
             data_writter(options[index],"to_excel")

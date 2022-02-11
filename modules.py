@@ -42,7 +42,7 @@ make_dir(paths)
 
 
 
-start_time=arrow.now().format("YY-MM-DD_HH")
+start_time=arrow.now().format("YY-MM-DD")
 logging.basicConfig(filename=(f'log/{start_time}.log'),
                     format='[%(asctime)s] [%(levelname)s] => %(message)s',
                     level=logging.DEBUG)
@@ -101,11 +101,12 @@ def get_file():
 
 ####### get action return json
 def get_data(action):
-    if action not in ["all_device","all_groups"]:
+    if action not in ["all_device","all_groups","all_orgs"]:
         logging.error(f"not valid action={action} in get_data")
         print(f"not valid action={action} in get_data")
     elif action == "all_device":url = [env_url + '/api/v1/devices?count=100000']
     elif action == "all_groups":url = [env_url + '/api/v1/deviceGroups?count=100000']
+    elif action == "all_orgs":url = [env_url + '/api/v1/organizations?count=100000']
     try:
         async_send(url,"GET",action, header= {'Authorization':'Bearer ' + tok, 'Content-type':'application/json', 'Accept': 'application/json'},data="")
         if ok_arr[0] == 200:
@@ -175,8 +176,8 @@ def fiscalizer(action):
 
 async def fetch(url, session,method,sender_action,**kwargs):
     async with session.request(method,url,data=kwargs["data"],headers=kwargs["header"]) as response:
-        print(response.status)
-        if  sender_action in ["get_token","all_device","all_groups"] :
+        #print(response.status)
+        if  sender_action in ["get_token","all_device","all_groups","all_orgs"] :
             if response.status == 200:
                 ok_arr.append(response.status)
                 data_async.append(await response.json())
