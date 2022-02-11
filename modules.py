@@ -197,8 +197,7 @@ async def bound_fetch(sem, url, session,method,sender_action,**kwargs):
 async def run(urls,method,sender_action,**kwargs):
     tasks = []
     sem = asyncio.Semaphore(165)
-    conn = TCPConnector(limit=50)
-    #timeout = ClientTimeout(total=15)
+    conn = TCPConnector(limit=160)
     async with ClientSession(connector=conn) as session:
         if len(urls) == 1:
             url=urls[0]
