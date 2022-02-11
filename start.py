@@ -6,7 +6,6 @@ import curses
 from pick import pick,Picker
 from modules import *
 
-
 def go_back(picker):
     return None, -1
 

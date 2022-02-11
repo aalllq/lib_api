@@ -238,13 +238,13 @@ def timer(times):
         #print(f"{int(i)}",  end="\r", flush=True)
         
      
-def beeper(action):
+def beeper(action,**kwargs):
     all_urls=[]
     urls=[]
     all_sn_list=[]
     comment_list=[]
     not_find_device=[]
-    if action not in ["excel","all_device","sn_list","for_comment"]:
+    if action not in ["excel","all_device","sn_list","for_comment","by_id"]:
         logging.error(f'not valid action {action} in beeper')
     else:
         try:
@@ -278,6 +278,18 @@ def beeper(action):
                         urls.append(all_urls[all_sn_list.index(sn)])
                         print(sn,comment_list[all_sn_list.index(sn)],all_urls[all_sn_list.index(sn)])
             
+            if action == "by_id":
+                for id in kwargs["ids"]:
+                    url = env_url +'/api/v1/devices/'+ str(id) + '/beep'
+                    print(url)
+                    if url in all_urls:
+                        urls.append(url)
+                    
+            ####example
+            # ids=["002c4ed6-0482-4ea7-889e-acb700b0d83b","00580cdf-ed5f-445e-bf08-ac410127cd16"]
+            #beeper("by_id",ids=ids) 
+                        
+                    
             for tic in  range(20):
                 print(f"\n\nwait send beep {len(urls)} device beep\n not find sn = {len(not_find_device)}\n\n")
                 async_send(urls,"POST","beep", header= {'Authorization':'Bearer ' + tok, 'Content-type':'application/json', 'Accept': 'application/json'},data={})
