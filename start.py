@@ -1,4 +1,4 @@
-from __future__ import print_function
+
 from csv import excel
 import time
 import arrow
@@ -37,7 +37,7 @@ try:
     
     if options[index] == 'beep' :
             title = f"Выберите источник данных"
-            options = ['all_device','excel',"sn_list"] + def_options
+            options = ['all_device','excel',"sn_list","for_comment"] + def_options
             menu(title,options)
             beeper(options[index])
                 
