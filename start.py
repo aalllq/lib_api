@@ -19,7 +19,7 @@ def menu(title,options):
 try:
     def_options=['Exit']
     title = f"Выберите дейтсвие"
-    options = ['Fiscalize/Refiscalize','Get_device','beep'] + def_options
+    options = ['Fiscalize/Refiscalize','get_info','beep'] + def_options
     menu(title,options)
     if options[index] == 'Fiscalize/Refiscalize' :
         title = "\nвыберите режим перефискализации"
@@ -27,12 +27,12 @@ try:
         menu(title,options)
         if options[index] == 'async_from file' :
             print(fiscalizer("from_excel"))
-    if options[index] == 'Get_device' :
+    if options[index] == 'get_info' :
             title = f"Выберите тип получения устройств"
-            options = ['all_to_excel'] + def_options
+            options = ['all_device',"all_groups"] + def_options
             menu(title,options)
-            if options[index] == 'all_to_excel' :
-                data_writter("all_device","to_excel")
+           # if options[index] == 'all_to_excel' :
+            data_writter(options[index],"to_excel")
     
     if options[index] == 'beep' :
             title = f"Выберите источник данных"

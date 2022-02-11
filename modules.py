@@ -101,20 +101,20 @@ def get_file():
 
 ####### get action return json
 def get_data(action):
-    if action == "all_device":
-        url = [env_url + '/api/v1/devices?count=100000']
-    else:
-        logging.error("not valid action in get_data")
-        print("not valid action in get_data")
+    if action not in ["all_device","all_groups"]:
+        logging.error(f"not valid action={action} in get_data")
+        print(f"not valid action={action} in get_data")
+    elif action == "all_device":url = [env_url + '/api/v1/devices?count=100000']
+    elif action == "all_groups":url = [env_url + '/api/v1/deviceGroups?count=100000']
     try:
         async_send(url,"GET",action, header= {'Authorization':'Bearer ' + tok, 'Content-type':'application/json', 'Accept': 'application/json'},data="")
         if ok_arr[0] == 200:
             data=data_async
-            logging.info(f"get  device  in get_data,ok status:{len(ok_arr)}")
+            logging.info(f"get  {action}  in get_data,ok status:{len(ok_arr)}")
             return data
             
         else:
-            logging.error(f"get  device  in get_data error status {err_arr}")
+            logging.error(f"get  {action}  in get_data error status {err_arr}")
 
     except requests.exceptions.RequestException as err:
         logging.error(err,'error get data in get_datas',url)
@@ -160,7 +160,7 @@ def validator(obj,action):
 
 def fiscalizer(action):
     if action == "from_excel":
-        logging.info(f" start modelu fiscalization {action}")
+        logging.info(f"start modelu fiscalization {action}")
         print("выберите файл JSON для фискалзиации")
         file=get_file()
         all_device =get_data("all")
@@ -175,8 +175,8 @@ def fiscalizer(action):
 
 async def fetch(url, session,method,sender_action,**kwargs):
     async with session.request(method,url,data=kwargs["data"],headers=kwargs["header"]) as response:
-        #print(response.status,arrow.now())
-        if  sender_action in ["get_token","all_device"] :
+        print(response.status)
+        if  sender_action in ["get_token","all_device","all_groups"] :
             if response.status == 200:
                 ok_arr.append(response.status)
                 data_async.append(await response.json())
@@ -269,9 +269,7 @@ def beeper(action,**kwargs):
                 comment_array =  {i:comment_list.count(i) for i in comment_list}
                 print(f"\n Comment   :  Count kkt")
                 pprint(comment_array)
-                select_comment = str(input("\n ENTER NUM GALAXY \n"))
-                #print(select_comment)
-                #print(comment_list)
+                select_comment = str(input("\n ENTER COMMENT\n"))
                 for sn in all_sn_list:
                     if comment_list[all_sn_list.index(sn)] == select_comment:
                         urls.append(all_urls[all_sn_list.index(sn)])
@@ -312,8 +310,8 @@ def data_writter(data_type,action):
         print(f"{action} not action in data_writter")
         logging.error(f"{action} not action in data_writter")
         time.sleep(5)
-    elif action == "to_excel" and data_type == "all_device": 
-        rj=get_data("all_device")
+    elif action == "to_excel": 
+        rj=get_data(data_type)
         aa=pd.json_normalize(rj[0])
         df=pd.DataFrame(aa)
         filename='output/output_'+arrow.now().format('YYYY-MM-DD__HH_mm_ss')+'.xlsx'
