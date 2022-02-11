@@ -19,7 +19,7 @@ def menu(title,options):
 try:
     def_options=['Exit']
     title = f"Выберите дейтсвие"
-    options = ['Fiscalize/Refiscalize','get_info','beep'] + def_options
+    options = ['Fiscalize/Refiscalize','get_info','beep',"device_actions"] + def_options
     menu(title,options)
     if options[index] == 'Fiscalize/Refiscalize' :
         title = "\nвыберите режим перефискализации"
@@ -31,7 +31,6 @@ try:
             title = f"Выберите тип получения устройств"
             options = ['all_device',"all_groups","all_orgs"] + def_options
             menu(title,options)
-           # if options[index] == 'all_to_excel' :
             data_writter(options[index],"to_excel")
     
     if options[index] == 'beep' :
@@ -39,7 +38,12 @@ try:
             options = ['all_device','excel',"sn_list","for_comment"] + def_options
             menu(title,options)
             beeper(options[index])
-                
+    if options[index] == 'device_actions' :
+        title = f"pick action"
+        options = ['reboot_all_devices'] + def_options
+        menu(title,options)
+        device_action(options[index])
+        
             
 except KeyboardInterrupt:
     print ('Interrupted')       

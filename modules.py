@@ -107,13 +107,14 @@ def get_data(action):
     elif action == "all_device":url = [env_url + '/api/v1/devices?count=100000']
     elif action == "all_groups":url = [env_url + '/api/v1/deviceGroups?count=100000']
     elif action == "all_orgs":url = [env_url + '/api/v1/organizations?count=100000']
+    elif action == "all_cert":url = [env_url + '/api/v1/organizations?count=100000']
     try:
         async_send(url,"GET",action, header= {'Authorization':'Bearer ' + tok, 'Content-type':'application/json', 'Accept': 'application/json'},data="")
         if ok_arr[0] == 200:
             data=data_async
             logging.info(f"get  {action}  in get_data,ok status:{len(ok_arr)}")
             return data
-            
+
         else:
             logging.error(f"get  {action}  in get_data error status {err_arr}")
 
@@ -139,7 +140,7 @@ def file_parser(format):
                 parser_out.append(line.strip().split(';'))
             #print(pd.DataFrame.to_json(pd.DataFrame(parser_out)))
         return parser_out
- 
+
     except Exception as e:
             logging.error(f"error parse {file} in module parser()  {e}")
 
@@ -183,12 +184,12 @@ async def fetch(url, session,method,sender_action,**kwargs):
                 data_async.append(await response.json())
             else:
                 err_arr.append(response.status)
-        if sender_action in ["beep"]:
+        if sender_action in ["beep","reboot_all_devices"]:
             if response.status !=200:
                 err_arr.append(url)
             elif response.status == 200:
                 ok_arr.append(url)
-            
+
 
 async def bound_fetch(sem, url, session,method,sender_action,**kwargs):
     async with sem:
@@ -222,7 +223,7 @@ def async_send(urls,method,sender_action,**kwargs):
     loop = asyncio.get_event_loop()
     future = asyncio.ensure_future(run(urls,method,sender_action,**kwargs))
     loop.run_until_complete(future)
-        
+
 
     ########################################################################
 
@@ -231,13 +232,13 @@ def async_send(urls,method,sender_action,**kwargs):
 def timer(times):
     for i in range(int(times),0,-1):
         sys.stdout.write("\r")
-        sys.stdout.write("{:2d} seconds remaining.".format(i)) 
+        sys.stdout.write("{:2d} seconds remaining.".format(i))
         sys.stdout.flush()
         time.sleep(1)
     sys.stdout.write("\r")
         #print(f"{int(i)}",  end="\r", flush=True)
-        
-     
+
+
 def beeper(action,**kwargs):
     all_urls=[]
     urls=[]
@@ -256,14 +257,14 @@ def beeper(action,**kwargs):
                 else:comment_list.append(kkt["comment"].strip())
                 all_urls.append(url)
             if action == "all_device":
-                    urls=all_urls 
+                    urls=all_urls
             if action == "sn_list":
                 yes_no("Сейчас выдаст окно с выбора файла txt формат sn;any;any... либо sn  каждый с новой строки")
                 kkt_list=file_parser(action)
                 for sn in kkt_list:
                     if sn[0] in all_sn_list:
                         urls.append(all_urls[all_sn_list.index(sn[0])])
-                    else: 
+                    else:
                         print(f"{sn[0]} kkt not find check sn\n")
             if action ==  "for_comment":
                 #comment_array =  dict(sorted({i:comment_list.count(i) for i in comment_list}.items()))
@@ -275,19 +276,19 @@ def beeper(action,**kwargs):
                     if comment_list[all_sn_list.index(sn)] == select_comment:
                         urls.append(all_urls[all_sn_list.index(sn)])
                         print(sn,comment_list[all_sn_list.index(sn)],all_urls[all_sn_list.index(sn)])
-            
+
             if action == "by_id":
                 for id in kwargs["ids"]:
                     url = env_url +'/api/v1/devices/'+ str(id) + '/beep'
                     print(url)
                     if url in all_urls:
                         urls.append(url)
-                    
+
             ####example
             # ids=["002c4ed6-0482-4ea7-889e-acb700b0d83b","00580cdf-ed5f-445e-bf08-ac410127cd16"]
-            #beeper("by_id",ids=ids) 
-                        
-                    
+            #beeper("by_id",ids=ids)
+
+
             for tic in  range(20):
                 print(f"\n\nwait send beep {len(urls)} device beep\n not find sn = {len(not_find_device)}\n\n")
                 async_send(urls,"POST","beep", header= {'Authorization':'Bearer ' + tok, 'Content-type':'application/json', 'Accept': 'application/json'},data={})
@@ -299,11 +300,11 @@ def beeper(action,**kwargs):
                         print(f"err_beep {all_sn_list[all_urls.index(i)]} {comment_list[all_urls.index(i)]}")
                 print(f"\n ok_beep={len(ok_arr)}\n err_beep={len(err_arr)}\n\n\n wait next beep 20sec")
                 time.sleep(20)
-            
+
         except Exception as e:
             print(f'error in beeper  {e}')
-     
-            
+
+
 
 ### write data to_excel,to_list
 def data_writter(data_type,action):
@@ -311,7 +312,7 @@ def data_writter(data_type,action):
         print(f"{action} not action in data_writter")
         logging.error(f"{action} not action in data_writter")
         time.sleep(5)
-    elif action == "to_excel": 
+    elif action == "to_excel":
         rj=get_data(data_type)
         aa=pd.json_normalize(rj[0])
         df=pd.DataFrame(aa)
@@ -326,10 +327,51 @@ def data_writter(data_type,action):
             logging.info(f"{filename} not  written")
 
 
-    
+def device_action(action,**kwargs):
+    urls=[]
+    all_urls=[]
+    all_sn_list=[]
+    comment_list=[]
+    not_find_device=[]
+    try:
+        all_data=get_data("all_device")
+        if action in ["reboot_all_devices"]:
+            url_endl =  '/reboot'
+            method="PUT"
+            
+        for kkt in all_data[0]:
+            all_sn_list.append(kkt["serialNumber"])
+            comment_list.append(kkt["comment"].strip())
+            url = env_url +'/api/v1/devices/' + kkt['id'] + url_endl
+            all_urls.append(url)
+                
+            if not kkt["comment"]:
+                comment_list.append("None")
+            else:
+                comment_list.append(kkt["comment"].strip())
+        
+        if action == "reboot_all_devices":
+            urls==all_urls   
+            
+            
+
+        for tic in  range(20):
+                    print(f"\n\nwait send {action} {len(urls)}  \n not find sn = {len(not_find_device)}\n\n")
+                    async_send(urls,method,action, header= {'Authorization':'Bearer ' + tok, 'Content-type':'application/json', 'Accept': 'application/json'},data={})
+                    for i in all_urls:
+                        if i in ok_arr:
+                            print(f"ok {action} {all_sn_list[all_urls.index(i)]} {comment_list[all_urls.index(i)]}")
+                    for i in all_urls:
+                        if i in err_arr:
+                            print(f"err_{action} {all_sn_list[all_urls.index(i)]} {comment_list[all_urls.index(i)]}")
+                    print(f"\n ok {action} ={len(ok_arr)}\n err {action} ={len(err_arr)}\n\n\n wait next beep 20sec")
+                    time.sleep(20)
+
+    except Exception as e:
+            print(f'error in device_action {action}  {e}')
 
 
-# this always last     
+# this always last
 global  tok,env_vars,env_url
-tok,env_vars,env_url =get_token()  
+tok,env_vars,env_url =get_token()
 print(f"get login data {tok,env_vars,env_url}")
