@@ -89,9 +89,12 @@ def get_token():
 
 #Задаем вопрос если N выходим
 def yes_no(*args):
-    quest=input(f"\n\n\npress KEY \n\n Y-OK \n N= exit\n\n{args} \n\n")
-    if quest == "N"  or quest == "n":
-        exit("EXIT")
+    while True:
+        quest=input(f"\n\n\npress KEY \n\n Y-OK \n N= exit\n\n{args} \n\n")
+        if quest in ["N","n"]:
+            exit("EXIT")
+        elif quest in ["Y","y"]:
+            break
 
 def get_file():
     try:
@@ -102,7 +105,7 @@ def get_file():
 
 ####### get action return json
 def get_data(action):
-    if action not in ["all_device","all_groups","all_orgs"]:
+    if action not in ["all_device","all_groups","all_orgs","all_cert"]:
         logging.error(f"not valid action={action} in get_data")
         print(f"not valid action={action} in get_data")
     elif action == "all_device":url = [env_url + '/api/v1/devices?count=100000']
@@ -148,7 +151,7 @@ def file_parser(format):
 
 
 
-#####dvalidate types lens types=sn =(validate=sn,fn,rnm)
+#####validate types len 
 def validator(obj,action):
     try:
     #    print(type(obj))
@@ -179,7 +182,7 @@ def fiscalizer(action):
 
 
 
-###### sender####
+###### sender ####
 
 async def fetch(url, session,method,sender_action,**kwargs):
     async with session.request(method,url,data=kwargs["data"],headers=kwargs["header"]) as response:
@@ -245,76 +248,6 @@ def timer(times):
     sys.stdout.write("\r")
         #print(f"{int(i)}",  end="\r", flush=True)
 
-##old_beep
-def beeper(action,**kwargs):
-    all_urls=[]
-    urls=[]
-    all_sn_list=[]
-    comment_list=[]
-    not_find_device=[]
-    if action not in ["excel","all_device","sn_list","for_comment","by_id"]:
-        logging.error(f'not valid action {action} in beeper')
-    else:
-        try:
-            all_data=get_data("all_device")
-            for kkt in all_data[0]:
-                url = env_url +'/api/v1/devices/' + kkt['id']+'/beep'
-                all_sn_list.append(kkt["serialNumber"])
-                if not kkt["comment"]:comment_list.append("None")
-                else:comment_list.append(kkt["comment"].strip())
-                all_urls.append(url)
-                
-            if action == "all_device":
-                    urls=all_urls
-            if action == "sn_list":
-                yes_no("Сейчас выдаст окно с выбора файла txt формат sn;any;any... либо sn  каждый с новой строки")
-                kkt_list=file_parser(action)
-                for sn in kkt_list:
-                    if sn[0] in all_sn_list:
-                        urls.append(all_urls[all_sn_list.index(sn[0])])
-                    else:
-                        print(f"{sn[0]} kkt not find check sn\n")
-            if action ==  "for_comment":
-                #comment_array =  dict(sorted({i:comment_list.count(i) for i in comment_list}.items()))
-                comment_array =  {i:comment_list.count(i) for i in comment_list}
-                print(f"\n Comment   :  Count kkt")
-                pprint(comment_array)
-                select_comment = str(input("\n ENTER COMMENT\n"))
-                for sn in all_sn_list:
-                    if comment_list[all_sn_list.index(sn)] == select_comment:
-                        urls.append(all_urls[all_sn_list.index(sn)])
-                       # print(sn,comment_list[all_sn_list.index(sn)],all_urls[all_sn_list.index(sn)])
-
-            if action == "by_id":
-                for id in kwargs["ids"]:
-                    url = env_url +'/api/v1/devices/'+ str(id) + '/beep'
-                    if url in all_urls:
-                        urls.append(url)
-            #if action == "by_not_send_doc":
-                
-                
-            
-            ####example
-            # ids=["002c4ed6-0482-4ea7-889e-acb700b0d83b","00580cdf-ed5f-445e-bf08-ac410127cd16"]
-            #beeper("by_id",ids=ids)
-
-
-            for tic in  range(20):
-                print(f"\n\nwait send beep {len(urls)} device beep\n not find sn = {len(not_find_device)}\n\n")
-                async_send(urls,"POST","beep", header= {'Authorization':'Bearer ' + tok, 'Content-type':'application/json', 'Accept': 'application/json'},data={})
-                for i in all_urls:
-                    if i in ok_arr:
-                        print(f"ok_beep {all_sn_list[all_urls.index(i)]} {comment_list[all_urls.index(i)]}")
-                for i in all_urls:
-                    if i in err_arr:
-                        print(f"err_beep {all_sn_list[all_urls.index(i)]} {comment_list[all_urls.index(i)]}")
-                print(f"\n ok_beep={len(ok_arr)}\n err_beep={len(err_arr)}\n\n\n wait next beep 20sec")
-                time.sleep(20)
-
-        except Exception as e:
-            print(f'error in beeper  {e}')
-
-
 
 ### write data to_excel,to_list
 def data_writter(data_type,action):
@@ -327,7 +260,6 @@ def data_writter(data_type,action):
         aa=pd.json_normalize(rj[0])
         df=pd.DataFrame(aa)
         filename =f"output/{data_type}_{arrow.now().format('YYYY-MM-DD__HH_mm_ss')}.xlsx"
-#print(df['isContractTerminated'])
         try:
             df.to_excel(filename, sheet_name='Sheet_name_1',index=False,encoding='utf-8')
             print(f"{filename} written")
@@ -353,7 +285,7 @@ def device_action(action,input_data,**kwargs):
     elif action in ["beep"]:
         url_endl =  "/beep"
         method="POST"
-        intr=10
+        intr=20
     try:
         
         for kkt in all_data[0]:
@@ -386,12 +318,23 @@ def device_action(action,input_data,**kwargs):
                 for sn in all_sn_list:
                     if comment_list[all_sn_list.index(sn)] == sel_comment:
                         urls.append(all_urls[all_sn_list.index(sn)])
-                #pprint(comment_array)
-         #a,b=a['id'].get(1),a['serialNumber'].get(1)
-          #  print(a[0]['id'].get(1),a[0]['serialNumber'].get(1))
-            #    url = env_url +'/api/v1/devices/' + a['id'].get(l) + url_endl
-             #   urls.append(url)
-            
+        elif input_data is "sn_list":
+                yes_no("Сейчас выдаст окно с выбора файла txt формат sn;any;any... либо sn  каждый с новой строки")
+                kkt_list=file_parser(input_data)
+                for sn in kkt_list:
+                    if sn[0] in all_sn_list:
+                        urls.append(all_urls[all_sn_list.index(sn[0])])
+                    else:
+                        not_find_device.extend(sn)
+                        print(f"{sn[0]} kkt not find check sn\n")
+        
+        elif input_data is "by_id":
+            for id in kwargs["ids"]:
+                url = env_url +'/api/v1/devices/'+ str(id) + url_endl
+                if url in all_urls:
+                    urls.append(url)
+                    #Example#ids=["002c4ed6-0482-4ea7-889e-acb700b0d83b","00580cdf-ed5f-445e-bf08-ac410127cd16"]
+                    #Example#device_action("beep","by_id",ids=ids)
 
         for tic in  range(intr):
                     print(f"\n\nwait send {action} {len(urls)}  \n not find sn = {len(not_find_device)}\n\n")
