@@ -28,23 +28,27 @@ try:
         if options[index] == 'async_from file' :
             print(fiscalizer("from_excel"))
     if options[index] == 'get_info' :
-            title = f"Выберите тип получения устройств"
+            title = f"Выберите что хотите получить запиcь excell"
             options = ['all_device',"all_groups","all_orgs"] + def_options
             menu(title,options)
             data_writter(options[index],"to_excel")
     
     if options[index] == 'beep' :
-            title = f"Выберите источник данных"
+            title = f"Выберите источник данных  for_comment=action_all_by_comment/ all other action by sn"
             options = ['all_device','excel',"sn_list","for_comment"] + def_options
             menu(title,options)
             beeper(options[index])
     if options[index] == 'device_actions' :
-        title = f"pick action"
-        options = ['reboot_all_devices'] + def_options
+        title = f"pick input device"
+        options = ['all_device','excel',"sn_list","for_comment"]  + def_options
         menu(title,options)
-        device_action(options[index])
-        
-            
+        input_data=options[index]
+        if input_data is not "Exit":
+                title = f"pick action"
+                options = ['reboot','beep']  + def_options
+                menu(title,options)
+                device_action(options[index],input_data)
+
 except KeyboardInterrupt:
     print ('Interrupted')       
 

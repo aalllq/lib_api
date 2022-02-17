@@ -1,3 +1,4 @@
+from traceback import format_list
 import requests,json,urllib3
 import os
 from  pprint import pprint
@@ -129,7 +130,7 @@ def file_parser(format):
     try:
         if format not in ['excel','sn_list']:logging.error(f"error not format {format} in module parser()")
         elif format == "excel":
-            excel = pd.read_excel(file, engine='openpyxl',dtype=str)
+            excel = pd.read_excel(file, index_col=None, engine='openpyxl',dtype=str)
             parser_out = excel.to_json()
             parser_out = json.loads(parser_out)
         elif format == "sn_list":
@@ -152,7 +153,12 @@ def validator(obj,action):
     try:
     #    print(type(obj))
         if action == "16":
-            if  obj == None or len(obj) != 16:
+            if  obj is not None:
+                if len(obj.strip()) !=16:
+                    print(f"not validate {obj} is not len {action} in module validator()")
+                    return False
+            if obj is None:
+                print(f"not validate {obj} in module validator()")
                 return False
             else:
                 return True
@@ -184,13 +190,13 @@ async def fetch(url, session,method,sender_action,**kwargs):
                 data_async.append(await response.json())
             else:
                 err_arr.append(response.status)
-        if sender_action in ["beep","reboot_all_devices"]:
+        if sender_action in ["beep","reboot"]:
             if response.status !=200:
+                print(response.status)
                 err_arr.append(url)
             elif response.status == 200:
                 ok_arr.append(url)
-
-
+        print(f"requests_{sender_action}_ok={len(ok_arr)}  requests_{sender_action}_err={len(err_arr)}")
 async def bound_fetch(sem, url, session,method,sender_action,**kwargs):
     async with sem:
        await fetch(url, session,method,sender_action,**kwargs)
@@ -198,9 +204,10 @@ async def bound_fetch(sem, url, session,method,sender_action,**kwargs):
 
 async def run(urls,method,sender_action,**kwargs):
     tasks = []
-    sem = asyncio.Semaphore(165)
+    sem = asyncio.Semaphore(160)
+    timeout = ClientTimeout(450)
     conn = TCPConnector(limit=160)
-    async with ClientSession(connector=conn) as session:
+    async with ClientSession(connector=conn,timeout=timeout) as session:
         if len(urls) == 1:
             url=urls[0]
             task = asyncio.ensure_future(bound_fetch(sem, url.format(url),session,method,sender_action,**kwargs))
@@ -238,7 +245,7 @@ def timer(times):
     sys.stdout.write("\r")
         #print(f"{int(i)}",  end="\r", flush=True)
 
-
+##old_beep
 def beeper(action,**kwargs):
     all_urls=[]
     urls=[]
@@ -256,6 +263,7 @@ def beeper(action,**kwargs):
                 if not kkt["comment"]:comment_list.append("None")
                 else:comment_list.append(kkt["comment"].strip())
                 all_urls.append(url)
+                
             if action == "all_device":
                     urls=all_urls
             if action == "sn_list":
@@ -275,15 +283,17 @@ def beeper(action,**kwargs):
                 for sn in all_sn_list:
                     if comment_list[all_sn_list.index(sn)] == select_comment:
                         urls.append(all_urls[all_sn_list.index(sn)])
-                        print(sn,comment_list[all_sn_list.index(sn)],all_urls[all_sn_list.index(sn)])
+                       # print(sn,comment_list[all_sn_list.index(sn)],all_urls[all_sn_list.index(sn)])
 
             if action == "by_id":
                 for id in kwargs["ids"]:
                     url = env_url +'/api/v1/devices/'+ str(id) + '/beep'
-                    print(url)
                     if url in all_urls:
                         urls.append(url)
-
+            #if action == "by_not_send_doc":
+                
+                
+            
             ####example
             # ids=["002c4ed6-0482-4ea7-889e-acb700b0d83b","00580cdf-ed5f-445e-bf08-ac410127cd16"]
             #beeper("by_id",ids=ids)
@@ -316,7 +326,7 @@ def data_writter(data_type,action):
         rj=get_data(data_type)
         aa=pd.json_normalize(rj[0])
         df=pd.DataFrame(aa)
-        filename='output/output_'+arrow.now().format('YYYY-MM-DD__HH_mm_ss')+'.xlsx'
+        filename =f"output/{data_type}_{arrow.now().format('YYYY-MM-DD__HH_mm_ss')}.xlsx"
 #print(df['isContractTerminated'])
         try:
             df.to_excel(filename, sheet_name='Sheet_name_1',index=False,encoding='utf-8')
@@ -327,37 +337,65 @@ def data_writter(data_type,action):
             logging.info(f"{filename} not  written")
 
 
-def device_action(action,**kwargs):
-    urls=[]
-    all_urls=[]
-    all_sn_list=[]
-    comment_list=[]
-    not_find_device=[]
+def device_action(action,input_data,**kwargs):
+    urls = []
+    all_urls = []
+    all_sn_list = []
+    comment_list = []
+    not_find_device = []
+    intr = 1
+    data = {}
+    all_data=get_data("all_device") 
+    if action in ["reboot"]:
+        url_endl =  '/reboot'
+        method="PUT"
+        intr=5
+    elif action in ["beep"]:
+        url_endl =  "/beep"
+        method="POST"
+        intr=10
     try:
-        all_data=get_data("all_device")
-        if action in ["reboot_all_devices"]:
-            url_endl =  '/reboot'
-            method="PUT"
-            
+        
         for kkt in all_data[0]:
             all_sn_list.append(kkt["serialNumber"])
-            comment_list.append(kkt["comment"].strip())
             url = env_url +'/api/v1/devices/' + kkt['id'] + url_endl
             all_urls.append(url)
-                
-            if not kkt["comment"]:
-                comment_list.append("None")
-            else:
-                comment_list.append(kkt["comment"].strip())
-        
-        if action == "reboot_all_devices":
-            urls=all_urls   
-            
+            if not kkt["comment"]:comment_list.append(None)
+            else:comment_list.append(kkt["comment"].strip())
+        if input_data in ['all_device']:
+            urls=all_urls
+        elif input_data is "excel":
+            print("\n\nSelect xlsx file containing SerialNumbers")
+            a=file_parser(input_data)
+            for d_sn in a['serialNumber']:
+                if a['serialNumber'].get(d_sn) in all_sn_list:
+                    url = env_url +'/api/v1/devices/' + a['id'].get(d_sn)+ url_endl
+                    urls.append(url)
+                else:
+                    not_find_device.extend(a['serialNumber'].get(d_sn)())
+        elif input_data is "for_comment":
+                sel=[]
+                comment_array =  {i:comment_list.count(i) for i in comment_list}
+                for n, (k, v) in enumerate(comment_array.items()):
+                    sel.append(k)
+                    print(f"nubmer: {n}, Comment: {k}, kkt_count: {v}")
+                sel_comment=sel[int(input("\n\nENTER NUM COMMENT"))]
+                if  sel_comment is not None:
+                    sel_comment=sel_comment.strip()
+                yes_no(f"selected {sel_comment} SURE?")
+                for sn in all_sn_list:
+                    if comment_list[all_sn_list.index(sn)] == sel_comment:
+                        urls.append(all_urls[all_sn_list.index(sn)])
+                #pprint(comment_array)
+         #a,b=a['id'].get(1),a['serialNumber'].get(1)
+          #  print(a[0]['id'].get(1),a[0]['serialNumber'].get(1))
+            #    url = env_url +'/api/v1/devices/' + a['id'].get(l) + url_endl
+             #   urls.append(url)
             
 
-        for tic in  range(20):
+        for tic in  range(intr):
                     print(f"\n\nwait send {action} {len(urls)}  \n not find sn = {len(not_find_device)}\n\n")
-                    async_send(urls,method,action, header= {'Authorization':'Bearer ' + tok, 'Content-type':'application/json', 'Accept': 'application/json'},data={})
+                    async_send(urls,method,action, header= {'Authorization':'Bearer ' + tok, 'Content-type':'application/json', 'Accept': 'application/json'},data=data)
                     for i in all_urls:
                         if i in ok_arr:
                             print(f"ok {action} {all_sn_list[all_urls.index(i)]} {comment_list[all_urls.index(i)]}")
@@ -369,6 +407,7 @@ def device_action(action,**kwargs):
 
     except Exception as e:
             print(f'error in device_action {action}  {e}')
+            logging.error(f'error in device_action {action}  {e}')
 
 
 # this always last
