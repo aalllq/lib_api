@@ -19,7 +19,7 @@ def menu(title,options):
 try:
     def_options=['Exit']
     title = f"Выберите дейтсвие"
-    options = ['get_info',"device_actions","fiscalize","Refiscalize_not_change_opts"] + def_options
+    options = ['get_info',"device_actions","fiscalization","Refiscalize_not_change_opts"] + def_options
     menu(title,options)
     if options[index] == 'get_info' :
             title = f"Выберите что хотите получить запиcь excell"
@@ -38,26 +38,17 @@ try:
                 options = ['reboot','beep']  + def_options
                 menu(title,options)
                 device_action(options[index],input_data)
-    if options[index] == 'fiscalize' :
+    if options[index] == 'fiscalization' :
+        title = "\n Выберите действие\n"
+        options = ['fiscalize','save_rnm','close_fn'] + def_options
+        menu(title,options)
         action = options[index]
-        title = "\nвыберите откуда берем кассы \n"
+        title = f"\n выбрано действие {action} --- выберите источник устройство \n"
         options = ['excel'] + def_options
         menu(title,options)
-        if options[index] in ['excel']:
-                yes_no(f"selected {action},{options[index]} ?")
-                fiscalizer3000(action,options[index])
+        yes_no(f"selected {action}, источник {options[index]} ?")
+        fiscalizer3000(action,options[index])
                 
-    if options[index] == 'Refiscalize_not_change_opts' :
-        title = "\nвыберите ДЕЙСТВИЕ \n save_result-Сохранить данные из ККТ для перефискализации,запускать до закрытия ФН\n"
-        options = ['save_result',''] + def_options
-        menu(title,options)
-        if options[index] in ['save_result']:
-                action = options[index]
-                title = "\nвыберите откуда берем кассы \n"
-                options = ["from_excel","all_device"] + def_options
-                menu(title,options)
-                yes_no(f"selected {action},{options[index]} ?")
-                fiscalizer3000(action,options[index])
     
 except KeyboardInterrupt:
     print ('Interrupted')       
