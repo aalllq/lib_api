@@ -1,4 +1,6 @@
 from traceback import format_list
+from urllib.parse import urldefrag
+from attr import validate
 import requests,json,urllib3
 import os
 from  pprint import pprint
@@ -20,6 +22,7 @@ import numpy as np
 import xlsxwriter
 from tkinter import filedialog as fd
 import logging
+from collections import Counter
 urllib3.disable_warnings()
 
 
@@ -157,11 +160,13 @@ def validator(obj,action):
     #    print(type(obj))
         if action == "16":
             if  obj is not None:
-                if len(obj.strip()) !=16:
+                if len(obj.strip()) != 16:
                     print(f"not validate {obj} is not len {action} in module validator()")
+                    logging.warning(f"not validate {obj} in module validator()")
                     return False
             if obj is None:
                 print(f"not validate {obj} in module validator()")
+                logging.warning(f"not validate {obj} in module validator()")
                 return False
             else:
                 return True
@@ -169,16 +174,6 @@ def validator(obj,action):
         logging.error(f"error validate {obj} in module validator()")
 
 
-def fiscalizer(action):
-    if action == "from_excel":
-        logging.info(f"start modelu fiscalization {action}")
-        print("выберите файл JSON для фискалзиации")
-        file=get_file()
-        all_device =get_data("all")
-        file_json=_file_parser(excel,file)
-        print(file_json)
-    if action == "from_excel":
-        print("list")
 
 
 
@@ -193,13 +188,15 @@ async def fetch(url, session,method,sender_action,**kwargs):
                 data_async.append(await response.json())
             else:
                 err_arr.append(response.status)
-        if sender_action in ["beep","reboot"]:
+        if sender_action in ["beep","reboot","save_result"]:
             if response.status !=200:
-                print(response.status)
                 err_arr.append(url)
             elif response.status == 200:
                 ok_arr.append(url)
-        print(f"requests_{sender_action}_ok={len(ok_arr)}  requests_{sender_action}_err={len(err_arr)}")
+                if sender_action in ["save_result"]:
+                    data_async.append(await response.json())
+                    
+        print(f"requests_{sender_action}_ok={len(ok_arr)}  requests_{sender_action}_err={len(err_arr)}, status={response.status}")
 async def bound_fetch(sem, url, session,method,sender_action,**kwargs):
     async with sem:
        await fetch(url, session,method,sender_action,**kwargs)
@@ -217,7 +214,6 @@ async def run(urls,method,sender_action,**kwargs):
             tasks.append(task)
         elif len(urls) > 1:
             for url in urls:
-
                 task = asyncio.ensure_future(bound_fetch(sem, url.format(url),session,method,sender_action,**kwargs))
                 tasks.append(task)
         await asyncio.gather(*tasks)
@@ -250,23 +246,29 @@ def timer(times):
 
 
 ### write data to_excel,to_list
-def data_writter(data_type,action):
-    if action not in ["to_excel","to_list"]:
+def data_writter(data_type,action,**kwargs):
+    if action not in ["to_excel","to_list","rnm"]:
         print(f"{action} not action in data_writter")
         logging.error(f"{action} not action in data_writter")
         time.sleep(5)
-    elif action == "to_excel":
+        exit()
+    elif action == "to_excel" and data_type in["all_device","all_groups","all_orgs"]:
         rj=get_data(data_type)
         aa=pd.json_normalize(rj[0])
         df=pd.DataFrame(aa)
+    elif action in ["to_excel"] and data_type in ["arr","register_kkt"]:
+        aa=kwargs["obj"]
+        df=pd.DataFrame.from_dict(aa)
+
+    try:
+        
         filename =f"output/{data_type}_{arrow.now().format('YYYY-MM-DD__HH_mm_ss')}.xlsx"
-        try:
-            df.to_excel(filename, sheet_name='Sheet_name_1',index=False,encoding='utf-8')
-            print(f"{filename} written")
-            logging.info(f"{filename} written")
-        except:
-            print(f"{filename} written")
-            logging.info(f"{filename} not  written")
+        df.to_excel(filename, sheet_name='Sheet_name_1',index=False,encoding='utf-8')
+        print(f"{filename} written")
+        logging.info(f"{filename} written")
+    except:
+        print(f"{filename} written")
+        logging.info(f"{filename} not  written")
 
 
 def device_action(action,input_data,**kwargs):
@@ -285,7 +287,7 @@ def device_action(action,input_data,**kwargs):
     elif action in ["beep"]:
         url_endl =  "/beep"
         method="POST"
-        intr=20
+        intr=50
     try:
         
         for kkt in all_data[0]:
@@ -310,11 +312,11 @@ def device_action(action,input_data,**kwargs):
                 comment_array =  {i:comment_list.count(i) for i in comment_list}
                 for n, (k, v) in enumerate(comment_array.items()):
                     sel.append(k)
-                    print(f"nubmer: {n}, Comment: {k}, kkt_count: {v}")
+                    print(f"number: {n}, Comment: {k}, kkt_count: {v}")
                 sel_comment=sel[int(input("\n\nENTER NUM COMMENT"))]
                 if  sel_comment is not None:
                     sel_comment=sel_comment.strip()
-                yes_no(f"selected {sel_comment} SURE?")
+                yes_no(f"selected {sel_comment} ok?")
                 for sn in all_sn_list:
                     if comment_list[all_sn_list.index(sn)] == sel_comment:
                         urls.append(all_urls[all_sn_list.index(sn)])
@@ -351,6 +353,101 @@ def device_action(action,input_data,**kwargs):
     except Exception as e:
             print(f'error in device_action {action}  {e}')
             logging.error(f'error in device_action {action}  {e}')
+
+def fiscalizer3000(action,input_data,**kwargs):
+    urls = []
+    all_urls=[]
+    data = {}
+    kkt_sn_fn_id = [[],[],[]]
+    out=[]
+    all_device = get_data("all_device")
+    all_orgs = get_data("all_orgs")
+    all_groups = get_data("all_groups")
+    valid_kkt={}
+    for kkt in all_device[0]:
+        kkt_sn_fn_id[0].append(kkt["serialNumber"])
+        kkt_sn_fn_id[1].append(kkt["state"]["fsSerialNumber"])
+        kkt_sn_fn_id[2].append(kkt["id"])
+        
+        
+    
+    
+    
+    if input_data is "excel":
+        global r_file
+        r_file=file_parser(input_data)
+        if not 'СерийныйНомер' in r_file:
+            print('нет столбца СерийныйНомер переименуйте')
+            logging.error('нет столбца СерийныйНомер переименуйте проверте все столбцы в соотвествие с шаблоном')
+        else:
+            if not 'СерийныйНомер' in valid_kkt:valid_kkt.update({'СерийныйНомер':{}})
+            if not 'Результат' in valid_kkt:valid_kkt.update({'Результат':{}}) 
+            for k,v in r_file['СерийныйНомер'].copy().items():
+                if not v :
+                    r_file['СерийныйНомер'].pop(k)
+                    continue
+                else:
+                    if v in valid_kkt['СерийныйНомер'].values():valid_kkt['Результат'].update({k:"dub_sn"})
+                    elif not validator(v,"16"):valid_kkt['Результат'].update({k:"err_sn"})
+                    else:valid_kkt['Результат'].update({k:"ok_sn"}) 
+                valid_kkt['СерийныйНомер'].update({k:v})
+    ####
+    answer = {i:list(valid_kkt['Результат'].values()).count(i) for i in list(valid_kkt['Результат'].values())}
+    data_writter("register_kkt","to_excel",obj=valid_kkt)
+    yes_no(f"записан промежуточный файл, результат проверки sn {answer} продолжить ?")
+                    
+                
+                    
+                
+                    
+                    #валидация fn
+        
+        #print(f"\n всего валидных SN касс {len(valid_kkt['СерийныйНомер'])}")
+        #logging.info(f"всего валидных SN в списке {len(valid_kkt['СерийныйНомер'])}")
+        #data_writter("register_kkt","to_excel",obj=valid_kkt)
+        #yes_no('file_write continue proccess?')
+                    
+                    
+       # 
+      #  if len(valid_kkt['СериныйНомер']) >= 1:
+      #      for k,v in valid_kkt['СерийныйНомер']:
+        #        validator(valid_kkt)
+                
+                
+        
+
+        #    print(r_file.get(name))
+           # print(r_file.get(name))
+       
+       # if not 'СерийныйНомер' in r_file:
+           # print(нет)
+
+        # key_arr=  {key for key in r_file}
+        
+   # if action in ["save_result"]:
+    #    method = "GET"
+   #     endl = '/getFiscalizationResult'
+    #if input_data is 'all_device':
+  #      for kkt in all_device[0]:
+  #          url = env_url + '/api/v1/devices/' + kkt["id"] + endl
+  #          all_urls.append(url)
+    
+
+   # if input_data in ["all_device"]:
+     #   urls=all_urls
+     #   async_send(urls,method,action, header= {'Authorization':'Bearer ' + tok, 'Content-type':'application/json', 'Accept': 'application/json'},data=data)
+   # for ok_url in ok_arr:
+        #d=all_device[0][all_urls.index(ok_url)]
+       # d.update(data_async[ok_arr.index(ok_url))
+        #dr = {**dict(d),**dict(r)}
+     #   out.append(dict(d))
+    #print(out["state"])
+   # for k in out:print(k)
+   # print(out)
+   # data_writter("arr","rnm",obj=out)
+#fiscalizer(action,input_data,**kwargs)
+
+
 
 
 # this always last

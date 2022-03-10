@@ -19,21 +19,15 @@ def menu(title,options):
 try:
     def_options=['Exit']
     title = f"Выберите дейтсвие"
-    options = ['Fiscalize/Refiscalize','get_info','beep',"device_actions"] + def_options
+    options = ['get_info',"device_actions","fiscalize","Refiscalize_not_change_opts"] + def_options
     menu(title,options)
-    if options[index] == 'Fiscalize/Refiscalize' :
-        title = "\nвыберите режим перефискализации"
-        options = ['async_from file'] + def_options
-        menu(title,options)
-        if options[index] == 'async_from file' :
-            print(fiscalizer("from_excel"))
-            
     if options[index] == 'get_info' :
             title = f"Выберите что хотите получить запиcь excell"
-            options = ['all_device',"all_groups","all_orgs"] + def_options
+            options = ["all_device","all_groups","all_orgs"] + def_options
             menu(title,options)
             data_writter(options[index],"to_excel")
-            
+    
+
     if options[index] == 'device_actions' :
         title = f"pick input device"
         options = ['all_device','excel',"sn_list","for_comment"]  + def_options
@@ -44,7 +38,27 @@ try:
                 options = ['reboot','beep']  + def_options
                 menu(title,options)
                 device_action(options[index],input_data)
-
+    if options[index] == 'fiscalize' :
+        action = options[index]
+        title = "\nвыберите откуда берем кассы \n"
+        options = ['excel'] + def_options
+        menu(title,options)
+        if options[index] in ['excel']:
+                yes_no(f"selected {action},{options[index]} ?")
+                fiscalizer3000(action,options[index])
+                
+    if options[index] == 'Refiscalize_not_change_opts' :
+        title = "\nвыберите ДЕЙСТВИЕ \n save_result-Сохранить данные из ККТ для перефискализации,запускать до закрытия ФН\n"
+        options = ['save_result',''] + def_options
+        menu(title,options)
+        if options[index] in ['save_result']:
+                action = options[index]
+                title = "\nвыберите откуда берем кассы \n"
+                options = ["from_excel","all_device"] + def_options
+                menu(title,options)
+                yes_no(f"selected {action},{options[index]} ?")
+                fiscalizer3000(action,options[index])
+    
 except KeyboardInterrupt:
     print ('Interrupted')       
 
