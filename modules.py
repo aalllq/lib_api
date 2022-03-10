@@ -387,8 +387,9 @@ def fiscalizer3000(action,input_data,**kwargs):
                     r_file['СерийныйНомер'].pop(k)
                     continue
                 else:
-                    if v in valid_kkt['СерийныйНомер'].values():valid_kkt['Результат'].update({k:"dub_sn"})
-                    elif not validator(v,"16"):valid_kkt['Результат'].update({k:"err_sn"})
+                    if not validator(v,"16"):valid_kkt['Результат'].update({k:"err_sn"})
+                    elif v not in kkt_sn_fn_id[0]:valid_kkt['Результат'].update({k:"not_find_sn"})
+                    elif v in valid_kkt['СерийныйНомер'].values():valid_kkt['Результат'].update({k:"dub_sn"}) 
                     else:valid_kkt['Результат'].update({k:"ok_sn"}) 
                 valid_kkt['СерийныйНомер'].update({k:v})
     ####
