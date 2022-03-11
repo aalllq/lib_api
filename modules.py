@@ -188,12 +188,12 @@ async def fetch(url, session,method,sender_action,**kwargs):
                 data_async.append(await response.json())
             else:
                 err_arr.append(response.status)
-        if sender_action in ["beep","reboot","save_result"]:
+        if sender_action in ["beep","reboot","save_result","save_rnm"]:
             if response.status !=200:
                 err_arr.append(url)
             elif response.status == 200:
                 ok_arr.append(url)
-                if sender_action in ["save_result"]:
+                if sender_action in ["save_result","save_rnm"]:
                     data_async.append(await response.json())
                     
         print(f"requests_{sender_action}_ok={len(ok_arr)}  requests_{sender_action}_err={len(err_arr)}, status={response.status}")
@@ -315,7 +315,7 @@ def device_action(action,input_data,**kwargs):
                     print(f"number: {n}, Comment: {k}, kkt_count: {v}")
                 sel_comment=sel[int(input("\n\nENTER NUM COMMENT"))]
                 if  sel_comment is not None:
-                    sel_comment=sel_comment.strip()
+                    sel_comment = sel_comment.strip()
                 yes_no(f"selected {sel_comment} ok?")
                 for sn in all_sn_list:
                     if comment_list[all_sn_list.index(sn)] == sel_comment:
@@ -387,15 +387,51 @@ def fiscalizer3000(action,input_data,**kwargs):
                     r_file['СерийныйНомер'].pop(k)
                     continue
                 else:
-                    if not validator(v,"16"):valid_kkt['Результат'].update({k:"err_sn"})
-                    elif v not in kkt_sn_fn_id[0]:valid_kkt['Результат'].update({k:"not_find_sn"})
-                    elif v in valid_kkt['СерийныйНомер'].values():valid_kkt['Результат'].update({k:"dub_sn"}) 
-                    else:valid_kkt['Результат'].update({k:"ok_sn"}) 
+                    if not validator(v,"16"):
+                        valid_kkt['Результат'].update({k:"err_sn"})
+                    elif v not in kkt_sn_fn_id[0]:
+                        valid_kkt['Результат'].update({k:"not_find_sn"})
+                    elif v in valid_kkt['СерийныйНомер'].values():
+                        valid_kkt['Результат'].update({k:"dub_sn"}) 
+                    else:
+                        valid_kkt['Результат'].update({k:"ok_sn"}) 
                 valid_kkt['СерийныйНомер'].update({k:v})
     ####
     answer = {i:list(valid_kkt['Результат'].values()).count(i) for i in list(valid_kkt['Результат'].values())}
     data_writter("register_kkt","to_excel",obj=valid_kkt)
     yes_no(f"записан промежуточный файл, результат проверки sn {answer} продолжить ?")
+    
+    ####save rnm and stored data
+    if action is "save_rnm":
+        method = "GET"
+        
+        for k,v in valid_kkt['СерийныйНомер'].copy().items():
+            if valid_kkt['Результат'][k] is "ok_sn":
+                id=kkt_sn_fn_id[2][kkt_sn_fn_id[0].index(valid_kkt['СерийныйНомер'][k])]
+                url=env_url +'/api/v1/devices/' + str(id) + "/viewStoredTables" 
+                urls.append(url)
+            else:
+                for objk,objv in valid_kkt.copy().items():
+                    valid_kkt[objk].pop(k)
+                    
+        async_send(urls,method,action, header= {'Authorization':'Bearer ' + tok, 'Content-type':'application/json', 'Accept': 'application/json'},data=data)            
+        logging.info(f'get saved tables kkt return {len(data_async)}  obj')
+        print(valid_kkt)
+      #  if not 'РНМ' in valid_kkt:
+      #      valid_kkt.update({'РНМ':{}})
+    #    for k,v in valid_kkt['СерийныйНомер'].copy().items():
+      #      for rnms in data_async:
+      #          if rnms['serialNumber'] == v:
+      #              print(rnms["tables"][0]["cells"])
+                    
+           # if valid_kkt['СерийныйНомер'][k] is d
+
+          #  print(kkt['serialNumber'],type(kkt['serialNumber']))
+           # print(valid_kkt['СерийныйНомер'].values(),type(valid_kkt['СерийныйНомер'].values()))
+           
+            
+            
+            
                     
                 
                     

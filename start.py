@@ -19,7 +19,7 @@ def menu(title,options):
 try:
     def_options=['Exit']
     title = f"Выберите дейтсвие"
-    options = ['get_info',"device_actions","fiscalization","Refiscalize_not_change_opts"] + def_options
+    options = ['get_info',"device_actions","fiscalization"] + def_options
     menu(title,options)
     if options[index] == 'get_info' :
             title = f"Выберите что хотите получить запиcь excell"
@@ -40,7 +40,7 @@ try:
                 device_action(options[index],input_data)
     if options[index] == 'fiscalization' :
         title = "\n Выберите действие\n"
-        options = ['fiscalize','save_rnm','close_fn'] + def_options
+        options = ['fiscalize','save_rnm','-close_fn','-validate_kkt'] + def_options
         menu(title,options)
         action = options[index]
         title = f"\n выбрано действие {action} --- выберите источник устройство \n"
