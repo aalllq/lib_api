@@ -1,56 +1,29 @@
-
-from csv import excel
-import time
-import arrow
-import curses
-from pick import pick,Picker
-from modules import *
-
-def go_back(picker):
-    return None, -1
-
-def menu(title,options):
-        picker = Picker(options, title)
-        picker.register_custom_handler(curses.KEY_LEFT, go_back)
-        global opion,index  
-        option, index = picker.start()
-        time.sleep(1)
-      
-try:
-    def_options=['Exit']
-    title = f"Выберите дейтсвие"
-    options = ['get_info',"device_actions","fiscalization"] + def_options
-    menu(title,options)
-    if options[index] == 'get_info' :
-            title = f"Выберите что хотите получить запиcь excell"
-            options = ["all_device","all_groups","all_orgs"] + def_options
-            menu(title,options)
-            data_writter(options[index],"to_excel")
-    
-
-    if options[index] == 'device_actions' :
-        title = f"pick input device"
-        options = ['all_device','excel',"sn_list","for_comment"]  + def_options
-        menu(title,options)
-        input_data=options[index]
-        if input_data is not "Exit":
-                title = f"pick action"
-                options = ['reboot','beep']  + def_options
-                menu(title,options)
-                device_action(options[index],input_data)
-    if options[index] == 'fiscalization' :
-        title = "\n Выберите действие\n"
-        options = ['fiscalize','save_rnm','-close_fn','-validate_kkt'] + def_options
-        menu(title,options)
-        action = options[index]
-        title = f"\n выбрано действие {action} --- выберите источник устройство \n"
-        options = ['excel'] + def_options
-        menu(title,options)
-        yes_no(f"selected {action}, источник {options[index]} ?")
-        fiscalizer3000(action,options[index])
-                
-    
-except KeyboardInterrupt:
-    print ('Interrupted')       
-
-
+ОТЧЕТ О РЕГИСТРАЦИИ
+1041,ФН: 9960440300197228
+1037,РН ККТ: 0006262928011134
+1018,ИНН: 7722461620
+1040,ФД: 1
+1012,ДАТА, ВРЕМЯ: 15.03.2022 17:53:00
+1077,ФП: 278296642(210410967842)
+1062,СНО: 1(ОСН)
+1056,ПРИЗН. ШИФРОВАНИЯ: 1
+1002,ПРИЗН. АВТОНОМН. РЕЖ.: 0
+1001,ПРИЗН. АВТОМАТ. РЕЖ.: 1
+1109,ПРИЗН. РАСЧ. ЗА УСЛУГИ: 0
+1110,ПРИЗН. АС БСО: 0
+1108,ПРИЗН. ККТ ДЛЯ РАСЧ. ТОЛЬКО В ИНТЕРНЕТ: 0
+1048,НАИМЕН. ПОЛЬЗ.: ООО 5 ПОСТ
+1021,КАССИР: Татьяна Крестьянникова
+1013,ЗН ККТ: 0238450028007640
+1017,ИНН ОФД: 7713076301
+1209,ВЕРСИЯ ФФД: 2(1.05)
+1189,ВЕРСИЯ ФФД ККТ: 2(1.05)
+1060,АДР. САЙТА ФНС: nalog.gov.ru
+1046,НАИМЕН. ОФД: ПАО ВымпелКом
+1117,АДР. ЭЛ. ПОЧТЫ ОТПРАВ. ЧЕКА: ofdreceipt@beeline.ru
+1057,ПРИЗН. ПЛАТ. АГЕНТА: 64(АГЕНТ)
+1188,ВЕРСИЯ ККТ: 001
+1207,ПРИЗН. ТОРГОВЛИ ПОДАКЦИЗН. ТОВАРАМИ: 0
+1193,ПРИЗН. ПРОВЕД. АЗАРТН. ИГР: 0
+1126,ПРИЗН. ПРОВЕДЕНИЯ ЛОТЕРЕИ: 0
+1221,ПРИЗН. УСТАНОВКИ ПРИНТЕРА В АВТОМАТЕ: 0
