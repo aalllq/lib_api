@@ -5,3 +5,9 @@ log
 output
 output/*
 __pycache__
+*amq*.py
+all_docs_netpay.csv
+ddd.txt
+bakshifts.txt
+shifts_res_part1.txt
+shifts_res.txt
